@@ -47,5 +47,5 @@ jobs:
           tagName: v__VERSION__ 
           releaseName: 'fb-downloader-app v__VERSION__'
           releaseBody: 'ดาวน์โหลดโปรแกรมเวอร์ชันล่าสุดได้ที่นี่'
-          releaseDraft: true # สร้างเป็นแบบร่างไว้ก่อน ให้เราเข้าไปตรวจก่อนปล่อยจริง
+          releaseDraft: false # สร้างเป็นแบบร่างไว้ก่อน ให้เราเข้าไปตรวจก่อนปล่อยจริง
           prerelease: false
