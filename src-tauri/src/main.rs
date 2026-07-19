@@ -13,6 +13,8 @@ use std::process::Stdio;
 use std::path::Path;
 
 use axum::extract::Query; // 👈 เพิ่มบรรทัดนี้ด้านบนสุดของไฟล์ (ตรงกลุ่ม use axum::...)
+// กำหนด Path ใหม่ให้อยู่ในโฟลเดอร์ที่แอปมีสิทธิ์เขียนเสมอ
+const CONFIG_PATH: &str = "/tmp/fb_config.json";
 
 // ---------------------------------------------------------
 // เพิ่มโค้ดโครงสร้างและฟังก์ชันใหม่ 2 ตัวนี้ลงไปใน main.rs
@@ -75,9 +77,8 @@ pub struct DownloadPayload {
 // ---------------------------------------------------------
 
 pub fn load_config() -> AppConfig {
-    let config_path = "config.json";
-    if Path::new(config_path).exists() {
-        let data = fs::read_to_string(config_path).unwrap_or_default();
+    if Path::new(CONFIG_PATH).exists() {
+        let data = fs::read_to_string(CONFIG_PATH).unwrap_or_default();
         serde_json::from_str(&data).unwrap_or_default()
     } else {
         let default_config = AppConfig::default();
@@ -88,7 +89,8 @@ pub fn load_config() -> AppConfig {
 
 pub fn save_config(config: &AppConfig) {
     let data = serde_json::to_string_pretty(config).unwrap();
-    fs::write("config.json", data).expect("ไม่สามารถเขียนไฟล์ config.json ได้");
+    // เอา .expect() ออก เพื่อเวลามีปัญหาโปรแกรมหลังบ้านจะได้ไม่แครชดับไปเลย
+    let _ = fs::write(CONFIG_PATH, data); 
 }
 
 fn write_log(msg: &str) {
@@ -185,7 +187,8 @@ async fn handle_download(Json(payload): Json<DownloadPayload>) -> &'static str {
     let log_file = OpenOptions::new().create(true).append(true).open("/tmp/server.log").unwrap();
     let log_file_err = log_file.try_clone().unwrap();
  
-    let mut ffmpeg_cmd = Command::new("ffmpeg");
+    //let mut ffmpeg_cmd = Command::new("ffmpeg");
+    let mut ffmpeg_cmd = Command::new("/opt/homebrew/bin/ffmpeg");
 
     ffmpeg_cmd.arg("-y")
               .arg("-i").arg(&payload.video_url)
