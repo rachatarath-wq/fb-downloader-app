@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>System Settings</title>
+    <style>
+        body { background: #0f172a; color: #f8fafc; font-family: 'Segoe UI', Tahoma, Geneva, sans-serif; margin: 0; padding: 40px 20px; display: flex; justify-content: center; }
+        .card { background: #1e293b; border-radius: 12px; padding: 30px; width: 100%; max-width: 500px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.5); border: 1px solid #334155; }
+        h2 { margin-top: 0; margin-bottom: 25px; font-size: 22px; display: flex; align-items: center; gap: 10px; color: #ffffff; }
+        .form-group { margin-bottom: 20px; }
+        label { display: block; font-size: 14px; margin-bottom: 8px; color: #cbd5e1; }
+        input[type="text"], select { width: 100%; padding: 12px; background: #0f172a; color: #f8fafc; border: 1px solid #334155; border-radius: 8px; box-sizing: border-box; font-size: 15px; outline: none; transition: all 0.2s; }
+        input[type="text"]:focus, select:focus { border-color: #0ea5e9; }
+        
+        .input-group { display: flex; align-items: stretch; }
+        .input-group select { width: 35%; border-radius: 8px 0 0 8px; border-right: none; }
+        .input-group input { width: 45%; border-radius: 0; border-right: none; border-left: none; }
+        .input-group button { width: 20%; border-radius: 0 8px 8px 0; margin: 0; background: #334155; border: 1px solid #334155; color: white; cursor: pointer;}
+        .input-group button:hover { background: #475569; }
+
+        #custom-group { display: none; margin-top: 15px; padding: 15px; background: #111827; border-left: 4px solid #0ea5e9; border-radius: 0 8px 8px 0; }
+        .hint-text { color: #94a3b8; font-size: 13px; margin-top: 12px; line-height: 1.6; }
+        code { background: #1e293b; padding: 3px 6px; border-radius: 4px; color: #38bdf8; font-family: monospace; }
+        
+        .btn { padding: 12px; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; transition: all 0.2s; display: flex; justify-content: center; align-items: center; gap: 8px; width: 100%; }
+        .btn-save { background: #0ea5e9; color: white; margin-top: 10px; }
+        .btn-save:hover { background: #0284c7; }
+        .divider { height: 1px; background: #334155; margin: 30px 0; }
+        .btn-danger { background: #ef4444; color: white; }
+        .btn-danger:hover { background: #dc2626; }
+
+        .folder-item { padding: 10px; border-bottom: 1px solid #1e293b; cursor: pointer; display: flex; align-items: center; gap: 8px; color: #cbd5e1; }
+        .folder-item:hover { background: #334155; color: #fff; }
+        .folder-item:last-child { border-bottom: none; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h2>⚙️ System Settings</h2>
+        
+        <div class="form-group">
+            <label>ที่จัดเก็บไฟล์ (Directory ภายใน Docker):</label>
+            <div class="input-group">
+                <select id="preset-dirs">
+                    <option value="custom">✏️ พิมพ์เอง</option>
+                    <option value="/smb">📁 /smb (Network)</option>
+                    <option value="/downloads">📁 /downloads</option>
+                </select>
+                <input type="text" id="save-dir" placeholder="/smb">
+                <button type="button" id="btn-browse">🔍 ค้นหา</button>
+            </div>
+        </div>
+        
+        <div class="form-group">
+            <label>โปรไฟล์ FFmpeg:</label>
+            <select id="ffmpeg-profile">
+                <option value="mac">🍎 macOS / iOS (H.264)</option>
+                <option value="windows">🪟 Windows (Copy Original)</option>
+                <option value="custom">🛠️ Custom Command</option>
+            </select>
+
+            <div id="custom-group">
+                <input type="text" id="custom-args" placeholder="พิมพ์คำสั่ง FFmpeg ที่นี่...">
+                <div class="hint-text">
+                    *ไม่ต้องใส่ <code>-i</code> และ <code>ชื่อไฟล์ปลายทาง</code><br>
+                    💡 <b>ตัวอย่าง (แปลงไฟล์):</b><br>
+                    <code>-c:v libx264 -preset fast -c:a aac</code><br>
+                    💡 <b>ตัวอย่าง (ก๊อปปี้แบบแก้ Header):</b><br>
+                    <code>-c copy -movflags +faststart</code>
+                </div>
+            </div>
+        </div>
+        
+        <button class="btn btn-save" id="save">💾 บันทึกการตั้งค่า</button>
+        <div class="divider"></div>
+        <button class="btn btn-danger" id="clear-log">🗑️ ล้าง Server Logs</button>
+    </div>
+
+    <!-- Modal สำหรับ File Browser -->
+    <div id="browse-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); align-items:center; justify-content:center; z-index:1000; padding: 20px; box-sizing: border-box;">
+        <div class="card" style="width: 100%; max-width: 450px; padding: 20px;">
+            <h3 style="margin-top:0; color:#fff;">📂 เลือกโฟลเดอร์ปลายทาง</h3>
+            <div style="margin-bottom: 15px; font-size: 13px; color: #38bdf8; font-family: monospace; background: #0f172a; padding: 8px; border-radius: 6px; word-break: break-all;" id="current-path-display">/</div>
+            
+            <div id="folder-list" style="height: 300px; overflow-y: auto; background: #0f172a; border-radius: 8px; border: 1px solid #334155; padding: 5px;">
+                <!-- โฟลเดอร์ถูกโหลดมาใส่ตรงนี้ด้วย JS -->
+            </div>
+            
+            <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:20px;">
+                <button type="button" id="btn-cancel-browse" class="btn" style="background:#475569; width:auto; padding:10px 20px;">ยกเลิก</button>
+                <button type="button" id="btn-select-browse" class="btn btn-save" style="margin-top:0; width:auto; padding:10px 20px;">✅ ใช้โฟลเดอร์นี้</button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="/src/settings.js"></script>
+</body>
+</html>

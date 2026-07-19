@@ -1,0 +1,38 @@
+name: Build Windows EXE
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch: # เผื่อให้เรากดปุ่มสั่งรันเองได้
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          lfs: true  # 👈 เพิ่มบรรทัดนี้เข้าไปครับ
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc
+
+      - name: Install Frontend Dependencies
+        run: npm install
+
+      - name: Build Tauri App
+        run: npm run tauri build
+
+      - name: Upload EXE File
+        uses: actions/upload-artifact@v4
+        with:
+          name: fb-downloader-windows-exe
+          # ดึงเอาไฟล์ติดตั้ง .exe ที่ Build เสร็จแล้วออกมา
+          path: src-tauri/target/release/bundle/nsis/*.exe
