@@ -112,9 +112,12 @@ async fn save_settings(Json(config): Json<AppConfig>) -> &'static str {
 }
 
 async fn clear_logs() -> &'static str {
-    // ล้างข้อมูลไฟล์ Log ให้เหลือ 0 ไบต์
-    let _ = fs::File::create("/tmp/server.log");
-    write_log("✅ เคลียร์ Log เรียบร้อยแล้วผ่าน Extension!");
+    // ลบไฟล์ทิ้งไปเลยเด็ดขาด เพื่อตัดปัญหาการโดนโปรแกรมอื่น (FFmpeg) ยึดไฟล์ไว้
+    let _ = std::fs::remove_file("/tmp/server.log");
+    
+    // พอสั่งเขียน Log บรรทัดนี้ ระบบจะสร้างไฟล์ใหม่ขึ้นมาให้เองแบบสะอาด 100%
+    write_log("✅ เคลียร์ Log เรียบร้อยแล้วผ่านหน้าตั้งค่า!");
+    
     "Logs cleared"
 }
 
@@ -155,8 +158,11 @@ fn main() {
         });
     });
 
+   
     // 2. รันหน้าต่าง Desktop ของ Tauri (ส่วนนี้คือ UI ของ Mac)
     tauri::Builder::default()
+        .plugin(tauri_plugin_opener::init()) // 👈 แทรกบรรทัดนี้เพิ่มเข้าไปตรงนี้ครับ!
+        .plugin(tauri_plugin_dialog::init()) // 👈 ใส่บรรทัดนี้เพิ่มเข้าไป
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

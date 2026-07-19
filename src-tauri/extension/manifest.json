@@ -1,0 +1,28 @@
+{
+  "manifest_version": 3,
+  "name": "FB Private Downloader (Sniffer)",
+  "version": "2.0",
+  "description": "ดักจับลิงก์วิดีโอและเสียงดิบจาก Facebook แล้วส่งไปรวมไฟล์ที่ Docker",
+  "permissions": [
+  "contextMenus",
+  "webRequest",
+  "scripting",
+  "tabs",
+  "webNavigation" 
+],
+  "host_permissions": [
+    "*://*.facebook.com/*",
+    "*://*.fbcdn.net/*",
+    "http://127.0.0.1:3000/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  
+  "web_accessible_resources": [
+    {
+      "resources": ["qrcode.png"],
+      "matches": ["*://*.facebook.com/*"]
+    }
+  ]
+}

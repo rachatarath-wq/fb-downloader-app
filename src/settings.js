@@ -1,3 +1,10 @@
+import { resolveResource } from '@tauri-apps/api/path';
+//import { open } from '@tauri-apps/plugin-shell';
+//import { open } from '@tauri-apps/plugin-opener'; // ✅ ถูกต้อง
+import { openPath } from '@tauri-apps/plugin-opener';
+// เพิ่มบรรทัดนี้ไว้ด้านบนสุดของไฟล์ settings.js (ต่อจาก import ของเก่า)
+import { ask, message } from '@tauri-apps/plugin-dialog';
+
 document.addEventListener('DOMContentLoaded', () => {
     const SERVER_URL = "http://127.0.0.1:3000";
     
@@ -128,11 +135,46 @@ document.addEventListener('DOMContentLoaded', () => {
         .catch(err => alert("❌ ไม่สามารถบันทึกได้ กรุณาตรวจสอบ Server"));
     };
 
-    document.getElementById('clear-log').onclick = () => {
-        if(confirm("แน่ใจหรือไม่ว่าต้องการล้าง Log ทั้งหมด?")) {
-            fetch(`${SERVER_URL}/clear-log`, { method: 'POST' })
-                .then(() => alert("✅ ล้าง Log เรียบร้อย!"))
-                .catch(err => alert("❌ ล้าง Log ไม่สำเร็จ"));
+    // ลบปุ่ม clear-log อันเก่าออก แล้วใช้อันนี้แทนครับ:
+const clearLogBtn = document.getElementById('clear-log');
+if (clearLogBtn) {
+    clearLogBtn.addEventListener('click', async () => {
+        // ใช้ระบบถามยืนยันของ Tauri แบบสวยงาม (แทน confirm() ธรรมดา)
+        const confirmed = await ask('คุณแน่ใจหรือไม่ว่าต้องการล้าง Log ทั้งหมด?', {
+            title: 'ยืนยันการล้างข้อมูล',
+            kind: 'warning',
+        });
+
+        if (confirmed) {
+            try {
+                const response = await fetch(`${SERVER_URL}/clear-log`, { method: 'POST' });
+                if (response.ok) {
+                    // แจ้งเตือนแบบสวยงาม (แทน alert() ธรรมดา)
+                    await message('✅ ล้าง Log เรียบร้อย!', { title: 'สำเร็จ', kind: 'info' });
+                } else {
+                    await message(`❌ เซิร์ฟเวอร์ตอบกลับผิดปกติ: ${response.status}`, { title: 'เกิดข้อผิดพลาด', kind: 'error' });
+                }
+            } catch (err) {
+                console.error("Clear Log Error:", err);
+                await message('❌ เชื่อมต่อเซิร์ฟเวอร์ไม่ได้', { title: 'เชื่อมต่อล้มเหลว', kind: 'error' });
+            }
         }
-    };
+    });
+}
+
+    // ==========================================
+    // โค้ดส่วนที่เพิ่มใหม่สำหรับปุ่มเปิด Extension
+    // ==========================================
+    const extBtn = document.getElementById('open-ext-btn');
+    if (extBtn) {
+        extBtn.addEventListener('click', async () => {
+            try {
+                const resourcePath = await resolveResource('extension');
+                await openPath(resourcePath); // ✅ เปลี่ยนเป็น openPath
+            } catch (error) {
+                console.error("เปิดโฟลเดอร์ไม่สำเร็จ:", error);
+                alert("ไม่สามารถเปิดโฟลเดอร์ได้ กรุณาตรวจสอบว่ามีโฟลเดอร์ 'extension' อยู่ใน src-tauri หรือไม่");
+            }
+        });
+    }
 });
