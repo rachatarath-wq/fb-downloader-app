@@ -60,142 +60,151 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
             return;
         }
 
-        chrome.scripting.executeScript({
-            target: { tabId: tab.id },
-            func: () => {
-                return new Promise((resolve) => {
-                    let optionsSet = new Set(); 
+        // 🛡️ ขอ Cookies จาก Chrome API ตรงๆ (เนียนกว่าให้หน้าเว็บส่งมา)
+        chrome.cookies.getAll({ url: "https://www.facebook.com" }, (cookies) => {
+            let cookieString = cookies.map(c => c.name + "=" + c.value).join("; ");
+            
+            chrome.scripting.executeScript({
+                target: { tabId: tab.id },
+                func: () => {
+                    return new Promise((resolve) => {
+                        let optionsSet = new Set(); 
 
-                    // ฟังก์ชันทำความสะอาดข้อความแบบขั้นสูง (ดักอักขระต้องห้ามทั้งหมด)
-                    const cleanText = (txt) => {
-                        if (!txt) return "";
-                        let s = txt.replace(/^\(\d+\+?\)\s*/, "") // ลบตัวเลขแจ้งเตือน (20+)
-                                   .split('|')[0].split(' - ')[0] // ตัดข้อความท้าย Facebook
-                                   .replace(/Facebook/gi, "").replace(/Watch/gi, "")
-                                   .replace(/ดูเพิ่มเติม/g, "").replace(/See more/g, "")
-                                   .replace(/ประวัติการแชทขาดหายไป/gi, "")
-                                   .replace(/[\r\n]+/g, " ") // เปลี่ยนการขึ้นบรรทัดใหม่เป็นช่องว่าง
-                                   .replace(/[\\/:*?"<>|#\x00-\x1F\x7F]/g, "_") // ลบอักขระต้องห้ามทั้งหมดของระบบไฟล์
-                                   .replace(/\s+/g, " ") // ยุบช่องว่างหลายอันให้เหลืออันเดียว
-                                   .replace(/_+/g, "_") // ยุบขีดล่างหลายอันให้เหลืออันเดียว
-                                   .trim(); 
-                        return s.length > 70 ? s.substring(0, 70).trim() : s;
-                    };
+                        // ฟังก์ชันทำความสะอาดข้อความแบบขั้นสูง
+                        const cleanText = (txt) => {
+                            if (!txt) return "";
+                            let s = txt.replace(/^\(\d+\+?\)\s*/, "") // ลบตัวเลขแจ้งเตือน (20+)
+                                       .split('|')[0].split(' - ')[0] // ตัดข้อความท้าย Facebook
+                                       .replace(/Facebook/gi, "").replace(/Watch/gi, "")
+                                       .replace(/ดูเพิ่มเติม/g, "").replace(/See more/g, "")
+                                       .replace(/ประวัติการแชทขาดหายไป/gi, "")
+                                       .replace(/[\r\n]+/g, " ") 
+                                       .replace(/[\\/:*?"<>|#\x00-\x1F\x7F]/g, "_") 
+                                       .replace(/\s+/g, " ") 
+                                       .replace(/_+/g, "_") 
+                                       .trim(); 
+                            return s.length > 70 ? s.substring(0, 70).trim() : s;
+                        };
 
-                    // 1. กวาดจาก Title
-                    if (document.title) optionsSet.add(cleanText(document.title));
+                        // 1. กวาดจาก Title
+                        if (document.title) optionsSet.add(cleanText(document.title));
 
-                    // 2. กวาดจาก Meta Tags
-                    let ogTitle = document.querySelector('meta[property="og:title"]');
-                    if (ogTitle && ogTitle.content) optionsSet.add(cleanText(ogTitle.content));
-                    
-                    let ogDesc = document.querySelector('meta[name="description"]');
-                    if (ogDesc && ogDesc.content) optionsSet.add(cleanText(ogDesc.content));
+                        // 2. กวาดจาก Meta Tags
+                        let ogTitle = document.querySelector('meta[property="og:title"]');
+                        if (ogTitle && ogTitle.content) optionsSet.add(cleanText(ogTitle.content));
+                        
+                        let ogDesc = document.querySelector('meta[name="description"]');
+                        if (ogDesc && ogDesc.content) optionsSet.add(cleanText(ogDesc.content));
 
-                    // 3. กวาดจาก <h1>
-                    document.querySelectorAll('h1').forEach(h1 => {
-                        let txt = cleanText(h1.innerText);
-                        if (txt && txt.length > 5) optionsSet.add(txt);
-                    });
+                        // 3. กวาดจาก <h1>
+                        document.querySelectorAll('h1').forEach(h1 => {
+                            let txt = cleanText(h1.innerText);
+                            if (txt && txt.length > 5) optionsSet.add(txt);
+                        });
 
-                    // 4. กวาดจาก <span>
-                    document.querySelectorAll('span[dir="auto"]').forEach(span => {
-                        let txt = cleanText(span.innerText);
-                        if (txt && txt.length > 10 && !txt.includes("ถูกใจ") && !txt.includes("ความคิดเห็น") && !txt.includes("แชร์")) {
-                            optionsSet.add(txt);
-                        }
-                    });
+                        // 4. กวาดจาก <span>
+                        document.querySelectorAll('span[dir="auto"]').forEach(span => {
+                            let txt = cleanText(span.innerText);
+                            if (txt && txt.length > 10 && !txt.includes("ถูกใจ") && !txt.includes("ความคิดเห็น") && !txt.includes("แชร์")) {
+                                optionsSet.add(txt);
+                            }
+                        });
 
-                    // กรองเอาค่าว่างทิ้ง
-                    let finalOptions = Array.from(optionsSet).filter(o => o !== "" && o !== "_");
-                    if (finalOptions.length === 0) finalOptions.push("FB_Video");
+                        let finalOptions = Array.from(optionsSet).filter(o => o !== "" && o !== "_");
+                        if (finalOptions.length === 0) finalOptions.push("FB_Video");
 
-                    // ลบ Modal เก่าทิ้ง
-                    let existingModal = document.getElementById('fb-dl-custom-modal');
-                    if (existingModal) existingModal.remove();
+                        let existingModal = document.getElementById('fb-dl-custom-modal');
+                        if (existingModal) existingModal.remove();
 
-                    // สร้าง Modal
-                    const modalHtml = `
-                        <div id="fb-dl-custom-modal" style="position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.7); z-index:999999; display:flex; justify-content:center; align-items:center; font-family:sans-serif; backdrop-filter: blur(4px);">
-                            <div style="background:#11161d; padding:30px; border-radius:12px; width: 450px; max-width: 90%; box-shadow: 0 10px 30px rgba(0,0,0,0.8);">
-                                <h3 style="margin:0 0 10px 0; color:#fff; font-size: 18px;">📥 เลือกชื่อไฟล์วิดีโอ</h3>
-                                <p style="color:#94a3b8; font-size: 13px; margin-bottom: 20px;">ระบบค้นหาชื่อที่เป็นไปได้บนหน้าจอมาให้ เลือกจากรายการ หรือพิมพ์แก้ไขเองในช่องด้านล่างได้เลยครับ</p>
-                                
-                                <select id="fb-dl-select" style="width:100%; padding:10px; margin-bottom:15px; background:#1e293b; color:#fff; border:1px solid #334155; border-radius:8px; outline:none; font-size:14px; cursor:pointer;">
-                                    ${finalOptions.map(opt => `<option value="${opt}">${opt}</option>`).join('')}
-                                </select>
+                        // สร้าง Modal
+                        const modalHtml = `
+                            <div id="fb-dl-custom-modal" style="position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.7); z-index:999999; display:flex; justify-content:center; align-items:center; font-family:sans-serif; backdrop-filter: blur(4px);">
+                                <div style="background:#11161d; padding:30px; border-radius:12px; width: 450px; max-width: 90%; box-shadow: 0 10px 30px rgba(0,0,0,0.8);">
+                                    <h3 style="margin:0 0 10px 0; color:#fff; font-size: 18px;">📥 เลือกชื่อไฟล์วิดีโอ</h3>
+                                    <p style="color:#94a3b8; font-size: 13px; margin-bottom: 20px;">ระบบค้นหาชื่อที่เป็นไปได้บนหน้าจอมาให้ เลือกจากรายการ หรือพิมพ์แก้ไขเองในช่องด้านล่างได้เลยครับ</p>
+                                    
+                                    <select id="fb-dl-select" style="width:100%; padding:10px; margin-bottom:15px; background:#1e293b; color:#fff; border:1px solid #334155; border-radius:8px; outline:none; font-size:14px; cursor:pointer;">
+                                        ${finalOptions.map(opt => `<option value="${opt}">${opt}</option>`).join('')}
+                                    </select>
 
-                                <input type="text" id="fb-dl-input" value="${finalOptions[0]}" style="width:100%; padding:10px; margin-bottom:25px; background:#0f172a; color:#38bdf8; border:1px solid #0ea5e9; border-radius:8px; box-sizing:border-box; outline:none; font-size:14px;">
-                                
-                                <div style="display:flex; justify-content:flex-end; gap:10px;">
-                                    <button id="fb-dl-cancel" style="padding:10px 20px; cursor:pointer; background:#334155; color:#fff; border:none; border-radius:8px; font-weight:bold;">ยกเลิก</button>
-                                    <button id="fb-dl-ok" style="padding:10px 20px; cursor:pointer; background:#0ea5e9; color:#fff; border:none; border-radius:8px; font-weight:bold;">ดาวน์โหลด</button>
+                                    <input type="text" id="fb-dl-input" value="${finalOptions[0]}" style="width:100%; padding:10px; margin-bottom:25px; background:#0f172a; color:#38bdf8; border:1px solid #0ea5e9; border-radius:8px; box-sizing:border-box; outline:none; font-size:14px;">
+                                    
+                                    <div style="display:flex; justify-content:flex-end; gap:10px;">
+                                        <button id="fb-dl-cancel" style="padding:10px 20px; cursor:pointer; background:#334155; color:#fff; border:none; border-radius:8px; font-weight:bold;">ยกเลิก</button>
+                                        <button id="fb-dl-ok" style="padding:10px 20px; cursor:pointer; background:#0ea5e9; color:#fff; border:none; border-radius:8px; font-weight:bold;">ดาวน์โหลด</button>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                    `;
+                        `;
 
-                    document.body.insertAdjacentHTML('beforeend', modalHtml);
+                        document.body.insertAdjacentHTML('beforeend', modalHtml);
 
-                    const modal = document.getElementById('fb-dl-custom-modal');
-                    const select = document.getElementById('fb-dl-select');
-                    const input = document.getElementById('fb-dl-input');
-                    const btnOk = document.getElementById('fb-dl-ok');
-                    const btnCancel = document.getElementById('fb-dl-cancel');
+                        const modal = document.getElementById('fb-dl-custom-modal');
+                        const select = document.getElementById('fb-dl-select');
+                        const input = document.getElementById('fb-dl-input');
+                        const btnOk = document.getElementById('fb-dl-ok');
+                        const btnCancel = document.getElementById('fb-dl-cancel');
 
-                    select.addEventListener('change', (e) => {
-                        input.value = e.target.value;
+                        select.addEventListener('change', (e) => {
+                            input.value = e.target.value;
+                        });
+
+                        btnCancel.addEventListener('click', () => {
+                            modal.remove();
+                            resolve(null);
+                        });
+
+                        btnOk.addEventListener('click', () => {
+                            const finalName = input.value;
+                            modal.remove();
+                            // 🛡️ ส่ง User-Agent กลับมาพร้อมกับชื่อไฟล์ด้วย
+                            resolve({ filename: finalName, userAgent: navigator.userAgent });
+                        });
                     });
+                }
+            }, (results) => {
+                let userResult = results[0]?.result;
+                if (!userResult) return; 
 
-                    btnCancel.addEventListener('click', () => {
-                        modal.remove();
-                        resolve(null);
+                let userInput = userResult.filename;
+                let userAgent = userResult.userAgent; // 🛡️ รับค่า User-Agent ที่ดึงมาได้
+
+                let safeFilename = userInput
+                    .replace(/[\r\n]+/g, " ")
+                    .replace(/[\\/:*?"<>|#\x00-\x1F\x7F]/g, "_")
+                    .replace(/\s+/g, " ")
+                    .replace(/_+/g, "_")
+                    .trim();
+                    
+                if (safeFilename === "") safeFilename = "FB_Video_" + Date.now();
+
+                const audioToSend = latestAudioUrl ? latestAudioUrl : latestVideoUrl;
+
+                // 🛡️ แนบ User-Agent และ Cookies ยิงเข้า Server ของเรา
+                fetch("http://127.0.0.1:3000/download", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        video_url: latestVideoUrl, 
+                        audio_url: audioToSend, 
+                        filename: safeFilename,
+                        user_agent: userAgent,  // ✅ เพิ่มตรงนี้
+                        cookies: cookieString   // ✅ เพิ่มตรงนี้
+                    })
+                }).then(response => {
+                    chrome.scripting.executeScript({
+                        target: { tabId: tab.id },
+                        func: (name) => alert(`✅ เริ่มโหลดไฟล์:\n${name}.mp4\nเข้าไปดูใน NAS ได้เลยครับ`),
+                        args: [safeFilename]
                     });
-
-                    btnOk.addEventListener('click', () => {
-                        const finalName = input.value;
-                        modal.remove();
-                        resolve(finalName);
+                }).catch(err => {
+                    chrome.scripting.executeScript({
+                        target: { tabId: tab.id },
+                        func: () => alert("❌ ติดต่อ Docker ไม่ได้ เช็ค Server ด้วยครับ")
                     });
-                });
-            }
-        }, (results) => {
-            let userInput = results[0]?.result;
-            if (!userInput) return; 
-
-            // ทำความสะอาดชื่อไฟล์รอบสุดท้ายก่อนส่งเข้า Server (เผื่อผู้ใช้พิมพ์อักขระแปลกๆ เข้ามาเอง)
-            let safeFilename = userInput
-                .replace(/[\r\n]+/g, " ")
-                .replace(/[\\/:*?"<>|#\x00-\x1F\x7F]/g, "_")
-                .replace(/\s+/g, " ")
-                .replace(/_+/g, "_")
-                .trim();
-                
-            if (safeFilename === "") safeFilename = "FB_Video_" + Date.now();
-
-            const audioToSend = latestAudioUrl ? latestAudioUrl : latestVideoUrl;
-
-            fetch("http://127.0.0.1:3000/download", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    video_url: latestVideoUrl, 
-                    audio_url: audioToSend, 
-                    filename: safeFilename
-                })
-            }).then(response => {
-                chrome.scripting.executeScript({
-                    target: { tabId: tab.id },
-                    func: (name) => alert(`✅ เริ่มโหลดไฟล์:\n${name}.mp4\nเข้าไปดูใน NAS ได้เลยครับ`),
-                    args: [safeFilename]
-                });
-            }).catch(err => {
-                chrome.scripting.executeScript({
-                    target: { tabId: tab.id },
-                    func: () => alert("❌ ติดต่อ Docker ไม่ได้ เช็ค Server ด้วยครับ")
                 });
             });
-        });
+        }); // จบ block chrome.cookies.getAll
     } 
     
     // ---- เมนูดู Log และ Donate ----

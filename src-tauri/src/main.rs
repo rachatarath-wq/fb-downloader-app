@@ -70,6 +70,8 @@ pub struct DownloadPayload {
     pub video_url: String,
     pub audio_url: String,
     pub filename: Option<String>,
+    pub user_agent: Option<String>, // 🛡️ เพิ่มรับค่า User-Agent จาก Extension
+    pub cookies: Option<String>,    // 🛡️ เพิ่มรับค่า Cookies จาก Extension
 }
 
 // ---------------------------------------------------------
@@ -127,8 +129,6 @@ async fn clear_logs() -> &'static str {
 // ส่วนที่ 3: ระบบหลัก (Main Server & Download Logic)
 // ---------------------------------------------------------
 
-// #[tokio::main]
-//async fn main() {
 fn main() {
     // 1. แยกโค้ด Server ของคุณไปรันใน Background Thread
     std::thread::spawn(|| {
@@ -160,11 +160,10 @@ fn main() {
         });
     });
 
-   
     // 2. รันหน้าต่าง Desktop ของ Tauri (ส่วนนี้คือ UI ของ Mac)
     tauri::Builder::default()
-        .plugin(tauri_plugin_opener::init()) // 👈 แทรกบรรทัดนี้เพิ่มเข้าไปตรงนี้ครับ!
-        .plugin(tauri_plugin_dialog::init()) // 👈 ใส่บรรทัดนี้เพิ่มเข้าไป
+        .plugin(tauri_plugin_opener::init()) 
+        .plugin(tauri_plugin_dialog::init()) 
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
@@ -187,12 +186,44 @@ async fn handle_download(Json(payload): Json<DownloadPayload>) -> &'static str {
     let log_file = OpenOptions::new().create(true).append(true).open("/tmp/server.log").unwrap();
     let log_file_err = log_file.try_clone().unwrap();
  
-    //let mut ffmpeg_cmd = Command::new("ffmpeg");
+    // 🛡️ เตรียมข้อมูลพรางตัว (ถ้าไม่มีให้ใช้ Default เนียนๆ)
+    let user_agent = payload.user_agent.clone().unwrap_or_else(|| "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36".to_string());
+    
+    // 🛡️ จัดฟอร์แมต Headers สำหรับหลอก Facebook
+    //let mut headers = String::from("Referer: https://www.facebook.com/\r\n");
+    //if let Some(c) = &payload.cookies {
+   //     if !c.is_empty() {
+   //         headers.push_str(&format!("Cookie: {}\r\n", c));
+   //     }
+   // }
+    // 🛡️ จัดฟอร์แมต Headers สำหรับหลอก Facebook (อัปเกรดเพิ่ม Headers ย่อย)
+    let mut headers = String::from("Referer: https://www.facebook.com/\r\n");
+    
+    // เพิ่มชุด Headers มาตรฐานของ Google Chrome
+    headers.push_str("Accept: */*\r\n");
+    headers.push_str("Accept-Language: th-TH,th;q=0.9,en-US;q=0.8,en;q=0.7\r\n");
+    headers.push_str("Sec-Fetch-Mode: cors\r\n");
+    headers.push_str("Sec-Fetch-Site: cross-site\r\n");
+
+    if let Some(c) = &payload.cookies {
+        if !c.is_empty() {
+            headers.push_str(&format!("Cookie: {}\r\n", c));
+        }
+    }
+
     let mut ffmpeg_cmd = Command::new("/opt/homebrew/bin/ffmpeg");
 
-    ffmpeg_cmd.arg("-y")
-              .arg("-i").arg(&payload.video_url)
-              .arg("-i").arg(&payload.audio_url);
+    ffmpeg_cmd.arg("-y"); // บังคับเขียนทับไฟล์เดิม
+
+    // 🛡️ แทรกการพรางตัวสำหรับ Video (ต้องแทรกก่อน -i เสมอ)
+    ffmpeg_cmd.arg("-user_agent").arg(&user_agent);
+    ffmpeg_cmd.arg("-headers").arg(&headers);
+    ffmpeg_cmd.arg("-i").arg(&payload.video_url);
+
+    // 🛡️ แทรกการพรางตัวสำหรับ Audio (ต้องแทรกก่อน -i เสมอ)
+    ffmpeg_cmd.arg("-user_agent").arg(&user_agent);
+    ffmpeg_cmd.arg("-headers").arg(&headers);
+    ffmpeg_cmd.arg("-i").arg(&payload.audio_url);
 
     // 3. ใส่คำสั่งตาม Profile ที่ตั้งค่าไว้จาก Extension
     match config.ffmpeg_profile.as_str() {
