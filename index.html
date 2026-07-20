@@ -5,12 +5,21 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>System Settings</title>
     <style>
-        body { background: #0f172a; color: #f8fafc; font-family: 'Segoe UI', Tahoma, Geneva, sans-serif; margin: 0; padding: 40px 20px; display: flex; justify-content: center; }
-        .card { background: #1e293b; border-radius: 12px; padding: 30px; width: 100%; max-width: 500px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.5); border: 1px solid #334155; }
-        h2 { margin-top: 0; margin-bottom: 25px; font-size: 22px; display: flex; align-items: center; gap: 10px; color: #ffffff; }
-        .form-group { margin-bottom: 20px; }
-        label { display: block; font-size: 14px; margin-bottom: 8px; color: #cbd5e1; }
-        input[type="text"], select { width: 100%; padding: 12px; background: #0f172a; color: #f8fafc; border: 1px solid #334155; border-radius: 8px; box-sizing: border-box; font-size: 15px; outline: none; transition: all 0.2s; }
+        body { background: #0f172a; color: #f8fafc; font-family: 'Segoe UI', Tahoma, Geneva, sans-serif; margin: 0; padding: 15px; height: 100vh; box-sizing: border-box; display: flex; justify-content: center; align-items: center; }
+        .card { background: #1e293b; border-radius: 12px; padding: 20px; width: 100%; max-width: 500px; max-height: 100%; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.5); border: 1px solid #334155; display: flex; flex-direction: column; box-sizing: border-box; }
+        
+        .scroll-area { flex: 1; overflow-y: auto; padding-right: 8px; padding-bottom: 5px; }
+        .scroll-area::-webkit-scrollbar { width: 6px; }
+        .scroll-area::-webkit-scrollbar-track { background: #0f172a; border-radius: 4px; }
+        .scroll-area::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
+        .scroll-area::-webkit-scrollbar-thumb:hover { background: #64748b; }
+        
+        .donate-container { flex-shrink: 0; margin-top: 15px; padding-top: 15px; border-top: 1px dashed #334155; text-align: center; }
+        
+        h2 { margin-top: 0; margin-bottom: 15px; font-size: 20px; display: flex; align-items: center; gap: 10px; color: #ffffff; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; font-size: 13px; margin-bottom: 6px; color: #cbd5e1; }
+        input[type="text"], select { width: 100%; padding: 10px; background: #0f172a; color: #f8fafc; border: 1px solid #334155; border-radius: 8px; box-sizing: border-box; font-size: 14px; outline: none; transition: all 0.2s; }
         input[type="text"]:focus, select:focus { border-color: #0ea5e9; }
         
         .input-group { display: flex; align-items: stretch; }
@@ -19,73 +28,102 @@
         .input-group button { width: 20%; border-radius: 0 8px 8px 0; margin: 0; background: #334155; border: 1px solid #334155; color: white; cursor: pointer;}
         .input-group button:hover { background: #475569; }
 
-        #custom-group { display: none; margin-top: 15px; padding: 15px; background: #111827; border-left: 4px solid #0ea5e9; border-radius: 0 8px 8px 0; }
-        .hint-text { color: #94a3b8; font-size: 13px; margin-top: 12px; line-height: 1.6; }
-        code { background: #1e293b; padding: 3px 6px; border-radius: 4px; color: #38bdf8; font-family: monospace; }
+        #custom-group { display: none; margin-top: 10px; padding: 12px; background: #111827; border-left: 4px solid #0ea5e9; border-radius: 0 8px 8px 0; }
+        .hint-text { color: #94a3b8; font-size: 12px; margin-top: 8px; line-height: 1.5; }
+        code { background: #1e293b; padding: 2px 5px; border-radius: 4px; color: #38bdf8; font-family: monospace; }
         
-        .btn { padding: 12px; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; transition: all 0.2s; display: flex; justify-content: center; align-items: center; gap: 8px; width: 100%; }
-        .btn-save { background: #0ea5e9; color: white; margin-top: 10px; }
+        .btn { padding: 10px; border: none; border-radius: 8px; font-size: 15px; font-weight: bold; cursor: pointer; transition: all 0.2s; display: flex; justify-content: center; align-items: center; gap: 8px; width: 100%; }
+        .btn-save { background: #0ea5e9; color: white; margin-top: 5px; }
         .btn-save:hover { background: #0284c7; }
-        
-        /* เพิ่ม CSS สำหรับปุ่ม Extension */
-        .btn-ext { background: #8b5cf6; color: white; margin-bottom: 10px; }
+        .btn-ext { background: #8b5cf6; color: white; margin-bottom: 8px; }
         .btn-ext:hover { background: #7c3aed; }
-        
-        .divider { height: 1px; background: #334155; margin: 30px 0; }
-        
+        .btn-stop { background: #f59e0b; color: white; margin-bottom: 8px; }
+        .btn-stop:hover { background: #d97706; }
         .btn-danger { background: #ef4444; color: white; }
         .btn-danger:hover { background: #dc2626; }
-
-        .folder-item { padding: 10px; border-bottom: 1px solid #1e293b; cursor: pointer; display: flex; align-items: center; gap: 8px; color: #cbd5e1; }
+        
+        .divider { height: 1px; background: #334155; margin: 15px 0; }
+        
+        .folder-item { padding: 8px; border-bottom: 1px solid #1e293b; cursor: pointer; display: flex; align-items: center; gap: 8px; color: #cbd5e1; font-size: 14px; }
         .folder-item:hover { background: #334155; color: #fff; }
         .folder-item:last-child { border-bottom: none; }
+
+        .donate-text { color: #94a3b8; font-size: 12px; margin-bottom: 10px; letter-spacing: 0.5px; }
+        .donate-btn-group { display: flex; gap: 10px; }
+        .btn-donate { font-size: 13px; padding: 8px; flex: 1; }
+        .btn-promptpay { background: #10b981; color: white; }
+        .btn-promptpay:hover { background: #059669; }
+        .btn-global { background: #0284c7; color: white; }
+        .btn-global:hover { background: #0369a1; }
+        
+        #qr-display-area { display: none; margin-top: 15px; padding: 15px; background: #0f172a; border-radius: 8px; border: 1px solid #334155; }
+        .qr-image { max-width: 150px; border-radius: 8px; margin-bottom: 10px; border: 3px solid #fff; }
     </style>
 </head>
 <body>
     <div class="card">
-        <h2>⚙️ System Settings</h2>
         
-        <div class="form-group">
-            <label>ที่จัดเก็บไฟล์ (Directory ภายใน Docker):</label>
-            <div class="input-group">
-                <select id="preset-dirs">
-                    <option value="custom">✏️ พิมพ์เอง</option>
-                    <option value="/smb">📁 /smb (Network)</option>
-                    <option value="/downloads">📁 /downloads</option>
-                </select>
-                <input type="text" id="save-dir" placeholder="/smb">
-                <button type="button" id="btn-browse">🔍 ค้นหา</button>
-            </div>
-        </div>
-        
-        <div class="form-group">
-            <label>โปรไฟล์ FFmpeg:</label>
-            <select id="ffmpeg-profile">
-                <option value="mac">🍎 macOS / iOS (H.264)</option>
-                <option value="windows">🪟 Windows (Copy Original)</option>
-                <option value="custom">🛠️ Custom Command</option>
-            </select>
-
-            <div id="custom-group">
-                <input type="text" id="custom-args" placeholder="พิมพ์คำสั่ง FFmpeg ที่นี่...">
-                <div class="hint-text">
-                    *ไม่ต้องใส่ <code>-i</code> และ <code>ชื่อไฟล์ปลายทาง</code><br>
-                    💡 <b>ตัวอย่าง (แปลงไฟล์):</b><br>
-                    <code>-c:v libx264 -preset fast -c:a aac</code><br>
-                    💡 <b>ตัวอย่าง (ก๊อปปี้แบบแก้ Header):</b><br>
-                    <code>-c copy -movflags +faststart</code>
+        <!-- โซนตั้งค่า (เลื่อนได้) -->
+        <div class="scroll-area">
+            <h2>⚙️ System Settings</h2>
+            
+            <div class="form-group">
+                <label>ที่จัดเก็บไฟล์ (Directory ภายใน Docker):</label>
+                <div class="input-group">
+                    <select id="preset-dirs">
+                        <option value="custom">✏️ พิมพ์เอง</option>
+                        <option value="/smb">📁 /smb (Network)</option>
+                        <option value="/downloads">📁 /downloads</option>
+                    </select>
+                    <input type="text" id="save-dir" placeholder="/smb">
+                    <button type="button" id="btn-browse">🔍 ค้นหา</button>
                 </div>
             </div>
+            
+            <div class="form-group">
+                <label>โปรไฟล์ FFmpeg:</label>
+                <select id="ffmpeg-profile">
+                    <option value="mac">🍎 macOS / iOS (H.264)</option>
+                    <option value="windows">🪟 Windows (Copy Original)</option>
+                    <option value="custom">🛠️ Custom Command</option>
+                </select>
+
+                <div id="custom-group">
+                    <input type="text" id="custom-args" placeholder="พิมพ์คำสั่ง FFmpeg ที่นี่...">
+                    <div class="hint-text">
+                        *ไม่ต้องใส่ <code>-i</code> และ <code>ชื่อไฟล์ปลายทาง</code><br>
+                        💡 <b>ตัวอย่าง (แปลงไฟล์):</b><br>
+                        <code>-c:v libx264 -preset fast -c:a aac</code><br>
+                        💡 <b>ตัวอย่าง (ก๊อปปี้แบบแก้ Header):</b><br>
+                        <code>-c copy -movflags +faststart</code>
+                    </div>
+                </div>
+            </div>
+            
+            <button class="btn btn-save" id="save">💾 บันทึกการตั้งค่า</button>
+            <div class="divider"></div>
+            <button class="btn btn-ext" id="open-ext-btn">🧩 เปิดโฟลเดอร์ติดตั้ง Extension</button>
+            <button class="btn btn-stop" onclick="stopDownload()">⏹ หยุดการดาวน์โหลด (Stop)</button>
+            <button class="btn btn-danger" id="clear-log">🗑️ ล้าง Server Logs</button>
         </div>
-        
-        <button class="btn btn-save" id="save">💾 บันทึกการตั้งค่า</button>
-        
-        <div class="divider"></div>
-        
-        <!-- เพิ่มปุ่ม Extension ตรงนี้ -->
-        <button class="btn btn-ext" id="open-ext-btn">🧩 เปิดโฟลเดอร์ติดตั้ง Extension</button>
-        
-        <button class="btn btn-danger" id="clear-log">🗑️ ล้าง Server Logs</button>
+
+        <!-- โซน Donate (ติดขอบล่างเสมอ) -->
+        <div class="donate-container">
+            <div class="donate-text">☕ สนับสนุนการพัฒนาโปรแกรม (Support Developer)</div>
+            <div class="donate-btn-group">
+                <button class="btn btn-donate btn-promptpay" onclick="showQR()">🇹🇭 PromptPay</button>
+                <a href="https://buymeacoffee.com/rachata.rath" target="_blank" class="btn btn-donate btn-global" style="text-decoration: none;">
+                    🌍 Global Pay
+                </a>
+            </div>
+            
+            <div id="qr-display-area">
+                <img src="/src/assets/qrcode.png" alt="PromptPay QR Code" class="qr-image">
+                <div style="color: #cbd5e1; font-size: 13px; margin-bottom: 10px;">ชื่อบัญชี: รชต รัตนวสวัต</div>
+                <button class="btn" style="background: #475569; padding: 6px; font-size: 14px;" onclick="hideQR()">ปิดหน้าต่าง</button>
+            </div>
+        </div>
+
     </div>
 
     <!-- Modal สำหรับ File Browser -->
@@ -94,9 +132,7 @@
             <h3 style="margin-top:0; color:#fff;">📂 เลือกโฟลเดอร์ปลายทาง</h3>
             <div style="margin-bottom: 15px; font-size: 13px; color: #38bdf8; font-family: monospace; background: #0f172a; padding: 8px; border-radius: 6px; word-break: break-all;" id="current-path-display">/</div>
             
-            <div id="folder-list" style="height: 300px; overflow-y: auto; background: #0f172a; border-radius: 8px; border: 1px solid #334155; padding: 5px;">
-                <!-- โฟลเดอร์ถูกโหลดมาใส่ตรงนี้ด้วย JS -->
-            </div>
+            <div id="folder-list" style="height: 300px; overflow-y: auto; background: #0f172a; border-radius: 8px; border: 1px solid #334155; padding: 5px;"></div>
             
             <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:20px;">
                 <button type="button" id="btn-cancel-browse" class="btn" style="background:#475569; width:auto; padding:10px 20px;">ยกเลิก</button>
@@ -106,5 +142,29 @@
     </div>
 
     <script type="module" src="/src/settings.js"></script>
+
+    <script>
+        window.showQR = function() { document.getElementById('qr-display-area').style.display = 'block'; };
+        window.hideQR = function() { document.getElementById('qr-display-area').style.display = 'none'; };
+    </script>
+
+    <script>
+        try {
+            const { invoke } = window.__TAURI__.tauri;
+            window.stopDownload = async function() {
+                try {
+                    const result = await invoke('stop_download_tauri');
+                    console.log(result);
+                    alert("✅ " + result); 
+                } catch (error) {
+                    console.error("Error stopping download:", error);
+                    alert("❌ เกิดข้อผิดพลาด: " + error);
+                }
+            };
+        } catch (e) {
+            console.warn("⚠️ ไม่พบระบบ Tauri");
+            window.stopDownload = function() { alert("ฟังก์ชันนี้ต้องรันผ่านแอปพลิเคชันหลักเท่านั้น"); };
+        }
+    </script>
 </body>
 </html>

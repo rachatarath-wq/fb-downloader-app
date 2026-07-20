@@ -989,9 +989,10 @@ checksum = "9f1f227452a390804cdb637b74a86990f2a7d7ba4b7d5693aac9b4dd6defd8d6"
 
 [[package]]
 name = "fb-downloader-app"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "axum",
+ "lazy_static",
  "serde",
  "serde_json",
  "tauri",
@@ -1911,6 +1912,12 @@ dependencies = [
  "serde",
  "unicode-segmentation",
 ]
+
+[[package]]
+name = "lazy_static"
+version = "1.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bbd2bcb4c963f2ddae06a2efc7e9f3591312473c50c6685e1f298068316e66fe"
 
 [[package]]
 name = "libappindicator"

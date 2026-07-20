@@ -1,6 +1,6 @@
 [package]
 name = "fb-downloader-app"
-version = "0.1.0"
+version = "0.2.0"
 description = "A Tauri App"
 authors = ["you"]
 edition = "2021"
@@ -26,4 +26,5 @@ serde_json = "1.0.150"
 tokio = { version = "1.53.0", features = ["full"] }
 tower-http = { version = "0.7.0", features = ["cors"] }
 tauri-plugin-dialog = "2.7.2"
+lazy_static = "1.4.0"
 
